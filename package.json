@@ -1,0 +1,15 @@
+{
+  "name": "lyre-practice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "琴键练习器：多曲目、键位可视化、实时琴音",
+  "scripts": {
+    "start": "node serve.mjs",
+    "build": "node build.mjs",
+    "check": "node scripts/check-songs.mjs"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>琴键练习</title>
+<style>
+/* ---------------------------------------------------------------
+   设计系统：练习纸 / 纸与墨
+   paper 是纸，ink 是墨，蓝色只用来填"下一个键"
+   --------------------------------------------------------------- */
+:root{
+  --paper:#e8e6dd;
+  --card:#f4f2ea;
+  --ink:#1b1a16;
+  --ink-2:#3c3a31;
+  --muted:#5f5c4c;
+  --rule:#c8c5b6;
+  --rule-2:#87846f;
+  --guide:#2b4a8f;
+  --guide-soft:rgba(43,74,143,.10);
+  --slip:#a5342a;
+  --right:#35634a;
+  --serif:Georgia,"Songti SC","STSong","SimSun",serif;
+  --sans:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"Cascadia Mono",Consolas,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  min-height:100dvh;
+  color:var(--ink);
+  font-family:var(--sans);
+  background-color:var(--paper);
+  background-image:radial-gradient(circle at center,rgba(27,26,22,.075) .9px,transparent .9px);
+  background-size:22px 22px;
+  -webkit-font-smoothing:antialiased;
+}
+.app{
+  width:min(1060px,100%);
+  margin:0 auto;
+  padding:30px 26px 40px;
+}
+
+/* ---------- 报头 ---------- */
+.masthead{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding-bottom:12px;border-bottom:1px solid var(--ink)}
+h1{
+  margin:0;
+  font-family:var(--serif);
+  font-size:clamp(20px,2.5vw,27px);
+  font-weight:600;
+  line-height:1.12;
+  letter-spacing:.005em;
+}
+.mast-sub{margin:7px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:0;font-size:12px;color:var(--muted)}
+.mast-sub span + span::before{content:'';display:inline-block;width:1px;height:9px;margin:0 9px;background:var(--rule-2);vertical-align:-1px}
+.mast-meta{display:flex;align-items:center;gap:14px;font-size:12px;white-space:nowrap}
+.songpick{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.songpick select{
+  font:inherit;font-size:12.5px;color:var(--ink);
+  background:var(--card);border:1px solid var(--rule-2);border-radius:4px;
+  padding:3px 6px;max-width:170px;cursor:pointer;
+}
+.songpick select:focus-visible{outline:2px solid var(--guide);outline-offset:1px}
+.tempo{font-family:var(--mono);color:var(--ink-2)}
+.state{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.state i{width:6px;height:6px;border-radius:50%;background:var(--rule-2)}
+.state em{font-style:normal}
+.state.live{color:var(--ink)}
+.state.live i{background:var(--guide)}
+
+/* ---------- 控制条 ---------- */
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:9px 14px;padding:11px 0;border-bottom:1px solid var(--rule)}
+.modes{display:flex;border:1px solid var(--rule-2);border-radius:4px;overflow:hidden;background:var(--card)}
+.modes button{
+  border:0;border-left:1px solid var(--rule);
+  background:transparent;color:var(--ink-2);
+  font:inherit;font-size:12.5px;padding:6px 13px;cursor:pointer;
+}
+.modes button:first-child{border-left:0}
+.modes button:hover{background:rgba(27,26,22,.05);color:var(--ink)}
+.modes button.on{background:var(--ink);color:var(--paper)}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--rule-2);border-radius:4px;background:var(--card);
+  color:var(--ink);font:inherit;font-size:12.5px;padding:6px 11px;cursor:pointer;
+}
+.btn:hover{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn:hover kbd{border-color:rgba(232,230,221,.45);color:var(--paper)}
+.btn:focus-visible,.modes button:focus-visible{outline:2px solid var(--guide);outline-offset:2px}
+.modes button:focus-visible{outline-offset:-2px}
+kbd{font-family:var(--mono);font-size:10px;line-height:1;padding:2px 4px;border:1px solid var(--rule-2);border-radius:3px;color:var(--muted)}
+.ctl{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);white-space:nowrap}
+.ctl b{font-family:var(--mono);font-weight:600;color:var(--ink);min-width:20px;text-align:right}
+.ctl input[type=range]{-webkit-appearance:none;appearance:none;width:88px;height:16px;background:transparent;cursor:pointer}
+.ctl input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--rule-2)}
+.ctl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;margin-top:-4.5px;border-radius:50%;background:var(--ink)}
+.ctl input[type=range]::-moz-range-track{height:2px;background:var(--rule-2)}
+.ctl input[type=range]::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--ink)}
+.ctl input[type=checkbox]{accent-color:#1b1a16;width:13px;height:13px;margin:0;cursor:pointer}
+
+/* ---------- 练习条 ---------- */
+.lesson{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;gap:26px;
+  padding:16px 0 14px;border-bottom:1px solid var(--rule);
+}
+.now{display:flex;align-items:center;gap:12px}
+.bigkey{
+  width:62px;height:62px;flex:0 0 auto;
+  display:grid;place-items:center;
+  font-family:var(--mono);font-size:34px;font-weight:600;
+  color:var(--guide);
+  background:var(--guide-soft);
+  border:1px solid var(--guide);border-radius:4px;
+}
+.bigkey.chord{font-size:19px;letter-spacing:-.02em}
+.bigkey.idle{color:var(--muted);border-color:var(--rule-2);background:var(--card);font-size:22px}
+.bigkey.done{color:var(--right);border-color:var(--right);background:rgba(53,99,73,.1);font-size:26px}
+.now-side{display:flex;flex-direction:column;gap:5px;min-width:88px}
+.now-label,.q-label{font-size:11px;color:var(--muted)}
+.now-spec{display:flex;align-items:baseline;gap:9px;font-size:12px;color:var(--muted)}
+.now-spec b{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--ink)}
+.now-spec em{font-style:normal}
+.meter{width:62px;height:2px;background:var(--rule);margin-top:2px;overflow:hidden}
+.meter i{display:block;width:100%;height:100%;background:var(--guide);transform:scaleX(0);transform-origin:left center}
+
+.qbox{min-width:0}
+.queue{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-height:26px;margin-top:6px}
+.q{
+  font-family:var(--mono);font-size:12.5px;line-height:1;
+  padding:5px 7px;border:1px solid var(--rule);border-radius:3px;
+  background:var(--card);color:var(--ink-2);
+}
+.q:first-child{color:var(--guide);border-color:var(--guide);background:var(--guide-soft)}
+.q.rest{color:var(--rule-2);border-style:dashed;background:transparent}
+.q.chord{font-size:11px}
+.progress{height:2px;background:var(--rule);margin-top:9px;overflow:hidden}
+.progress i{display:block;width:0;height:100%;background:var(--ink)}
+.hintline{font-size:11.5px;color:var(--muted);margin-top:7px}
+
+.tally{display:flex;gap:20px}
+.tally div{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.tally b{font-family:var(--mono);font-size:17px;font-weight:600;line-height:1}
+.tally span{font-size:10.5px;color:var(--muted)}
+
+/* ---------- 琴键 ---------- */
+.keyboard-wrap{position:relative;padding:16px 0 18px;border-bottom:1px solid var(--rule)}
+.keyboard{display:grid;grid-template-columns:30px repeat(7,minmax(0,1fr));gap:7px 6px}
+.rowlabel{
+  display:flex;align-items:center;justify-content:flex-end;
+  font-size:10.5px;color:var(--muted);padding-right:2px;
+}
+.key{
+  position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  min-height:74px;padding:8px 3px 7px;
+  font:inherit;cursor:pointer;
+  background:var(--card);
+  border:1px solid var(--rule-2);border-radius:4px;
+  --k-letter:var(--ink);
+  --k-dim:var(--muted);
+  transition:background .12s,border-color .12s,color .12s;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation;
+}
+.key:hover{border-color:var(--ink);background:#fbfaf5}
+.key:focus-visible{outline:2px solid var(--guide);outline-offset:2px}
+.key.next{background:var(--guide);border-color:var(--guide);--k-letter:#f4f2ea;--k-dim:rgba(244,242,234,.72)}
+.knum{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:17px;gap:1px;
+  font-family:var(--mono);font-size:11px;line-height:1;color:var(--k-dim);
+}
+.kdot{width:3px;height:3px;border-radius:50%;background:currentColor}
+.kletter{font-family:var(--mono);font-size:clamp(17px,2vw,21px);font-weight:600;letter-spacing:.02em;color:var(--k-letter);line-height:1.1}
+.ksolfa{font-size:9.5px;color:var(--k-dim);letter-spacing:.04em}
+
+.key.press{background:var(--ink);border-color:var(--ink);--k-letter:var(--paper);--k-dim:rgba(232,230,221,.68)}
+.key.good{background:rgba(53,99,73,.14);border-color:var(--right);--k-letter:var(--right);--k-dim:rgba(53,99,73,.72)}
+.key.bad{background:rgba(165,52,42,.13);border-color:var(--slip);--k-letter:var(--slip);--k-dim:rgba(165,52,42,.72)}
+.key.bad .kletter{animation:shake .3s ease-in-out}
+@keyframes shake{0%,100%{transform:translateX(0)}30%{transform:translateX(-2.5px)}70%{transform:translateX(2.5px)}}
+
+/* 下一个键：直接换背景色，不叠蒙层 */
+
+/* ---------- 谱面 ---------- */
+.score{padding-top:14px}
+.score-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:9px;
+  font-family:var(--mono);font-size:11px;color:var(--muted)}
+.score-lines{display:flex;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
+.score-lines::-webkit-scrollbar{display:none}
+.measure{flex:1 1 0;min-width:104px;border-left:1px solid var(--rule);padding:0 6px 4px;position:relative}
+.measure:last-child{border-right:2px solid var(--ink)}
+.beats{display:flex;align-items:flex-end;height:31px}
+.beat{flex:1 1 0;display:flex;align-items:flex-end;justify-content:center;gap:3px;padding-bottom:2px;position:relative;min-width:max-content}
+.beat.eighth::after{content:'';position:absolute;left:5%;right:5%;bottom:0;height:1.5px;background:rgba(60,58,49,.5)}
+.score-lines{--note-size:13.5px}
+.note{
+  font-family:var(--mono);font-size:var(--note-size);font-weight:600;line-height:1;
+  color:var(--ink-2);padding:3px 2px 2px;border-radius:2px;white-space:nowrap;
+  transition:color .1s,background .1s,box-shadow .1s;
+}
+.note.chord{font-size:calc(var(--note-size) * .78);letter-spacing:-.02em}
+.beat.tri{gap:1px}
+.beat.tri .note{font-size:calc(var(--note-size) * .78);padding:3px 0 2px;letter-spacing:-.02em}
+.note.rest{color:var(--muted);font-weight:400;font-family:var(--sans);font-size:calc(var(--note-size) * .89)}
+.note.hit{color:var(--right)}
+.note.miss{color:var(--slip);box-shadow:inset 0 -1.5px 0 var(--slip)}
+.note.cur{color:var(--guide);background:rgba(43,74,143,.07);box-shadow:inset 0 -2px 0 var(--guide)}
+
+/* ---------- 页脚 ---------- */
+.foot{margin-top:18px;font-size:11.5px;line-height:1.85;color:var(--muted)}
+.foot p{margin:0 0 4px}
+.foot b{font-family:var(--mono);font-weight:600;color:var(--ink-2)}
+.foot .k{display:inline-block;min-width:34px;color:var(--ink-2)}
+.foot .stamp{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:6px}
+
+/* ---------- 自由模式 ---------- */
+.app.mode-free .tally,
+.app.mode-free .progress{display:none}
+.app.mode-free .lesson{grid-template-columns:auto minmax(0,1fr)}
+.score-lines.tape{display:flex;gap:6px;align-items:center;padding:8px 2px;min-height:46px;overflow-x:auto}
+.tape-empty{font-size:12px;color:var(--muted);padding:10px 2px}
+
+/* ---------- 启动失败提示 ---------- */
+.boot-error{
+  position:fixed;inset:0;display:grid;place-items:center;
+  background:var(--paper);padding:24px;z-index:20;
+}
+.boot-error[hidden]{display:none}
+.boot-error div{
+  max-width:560px;border:1px solid var(--rule-2);border-radius:4px;background:var(--card);
+  padding:22px 24px;font-size:13px;line-height:1.9;color:var(--ink-2);
+}
+.boot-error h2{margin:0 0 10px;font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink)}
+.boot-error code{font-family:var(--mono);font-size:12px;background:rgba(27,26,22,.06);padding:1px 5px;border-radius:3px}
+
+/* ---------------------------------------------------------------
+   竖屏窄幅
+   --------------------------------------------------------------- */
+@media (max-width:660px){
+  .app{padding:20px 15px 30px}
+  .masthead{align-items:flex-start;flex-wrap:wrap;gap:10px}
+    .mast-meta{gap:10px;flex-wrap:wrap}
+  .songpick select{max-width:120px}
+  .lesson{grid-template-columns:1fr;gap:12px;padding:13px 0}
+  .tally{justify-content:space-between;gap:0}
+  .tally div{align-items:flex-start}
+  .keyboard{grid-template-columns:22px repeat(7,minmax(0,1fr));gap:5px 4px}
+  .rowlabel{font-size:9.5px}
+  .key{min-height:62px;padding:6px 1px}
+  .ksolfa{font-size:8.5px}
+  .measure{flex:0 0 96px;min-width:96px;padding:0 3px 4px}
+  .beats{height:28px}
+  .beat{gap:1px}
+  .score-lines{--note-size:11.5px}
+  .note{padding:3px 1px 2px}
+  .controls{gap:8px 10px}
+  .btn{padding:5px 9px}
+}
+
+/* ---------------------------------------------------------------
+   手机横屏：四段压平，琴键吃掉剩余高度
+   --------------------------------------------------------------- */
+@media (orientation:landscape) and (max-height:560px) and (max-width:960px){
+  body{background-size:18px 18px}
+  .app{
+    width:100%;height:calc(100dvh - 12px);min-height:0;
+    padding:max(6px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+    display:grid;
+    grid-template-rows:auto auto auto minmax(0,1fr) auto;
+    gap:5px;
+    overflow:hidden;
+  }
+  .masthead{padding-bottom:5px;align-items:center;gap:12px}
+  h1{font-size:15px;letter-spacing:.01em}
+  .mast-sub,.hintline,.foot,.score-head{display:none}
+  .mast-meta{gap:10px;font-size:11px}
+  .songpick{font-size:11px}
+  .songpick select{font-size:11.5px;padding:2px 4px;max-width:150px}
+  .controls{padding:5px 0;gap:6px 10px}
+  .modes button{padding:3px 9px;font-size:11.5px}
+  .btn{padding:3px 8px;font-size:11.5px}
+  .ctl{font-size:11px}
+  .ctl input[type=range]{width:64px}
+  .lesson{grid-template-columns:auto minmax(0,1fr) auto;gap:14px;padding:5px 0;align-items:center}
+  .bigkey{width:44px;height:44px;font-size:24px}
+  .bigkey.chord{font-size:15px}
+  .bigkey.idle{font-size:17px}
+  .bigkey.done{font-size:18px}
+  .now{gap:9px}
+  .now-side{gap:3px;min-width:0}
+  .now-label{display:none}
+  .now-spec{gap:7px;font-size:10.5px}
+  .now-spec b{font-size:13px}
+  .meter{width:44px}
+  .queue{margin-top:0;gap:4px;min-height:0;flex-wrap:nowrap;overflow:hidden}
+  .q-label{display:none}
+  .q{font-size:11px;padding:4px 5px}
+  .q.chord{font-size:9.5px}
+  .progress{margin-top:5px}
+  .tally{gap:12px}
+  .tally b{font-size:14px}
+  .tally span{font-size:9px}
+  .keyboard-wrap{padding:4px 0 4px;border-bottom:0;display:flex;min-height:0}
+  .keyboard{flex:1;min-height:0;grid-template-rows:repeat(3,minmax(0,1fr));gap:4px 5px;align-content:stretch}
+  .rowlabel{font-size:9px}
+  .key{min-height:0;padding:2px 2px;gap:0;border-radius:3px}
+  .knum{height:13px;font-size:10px;gap:0}
+  .kletter{font-size:15px}
+  .ksolfa{font-size:9px}
+  .score{padding-top:2px;min-height:0;border-top:1px solid var(--rule)}
+  .measure{flex:0 0 96px;min-width:96px;padding:0 3px 2px}
+  .beats{height:24px}
+  .beat{gap:2px}
+  .score-lines{--note-size:11.5px}
+  .note{padding:2px 1px}
+  .app.mode-free{grid-template-rows:auto auto auto minmax(0,1fr) auto}
+}
+@media (orientation:landscape) and (max-height:380px) and (max-width:960px){
+  .app{padding:4px 10px 6px;gap:4px}
+  h1{font-size:13px}
+  .mast-meta{font-size:10px}
+  .controls{padding:3px 0}
+  .modes button,.btn{font-size:10.5px;padding:2px 7px}
+  .bigkey{width:36px;height:36px;font-size:20px}
+  .tally b{font-size:12px}
+  .tally span{font-size:8.5px}
+  .kletter{font-size:13px}
+  .score{padding-top:1px}
+  .beats{height:20px}
+  .score-lines{--note-size:11px}
+  .measure{padding:0 2px 1px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<main class="app" id="app">
+
+  <header class="masthead">
+    <div>
+      <h1 id="songTitle">琴键练习</h1>
+      <p class="mast-sub" id="songMeta"><span>21 键 7×3</span><span>加载中</span></p>
+    </div>
+    <div class="mast-meta">
+      <label class="songpick">曲目
+        <select id="songSel" aria-label="选择曲目"></select>
+      </label>
+      <span class="tempo" id="tempoLabel">♩=90</span>
+      <span class="state" id="status" role="status" aria-live="polite"><i></i><em>待机</em></span>
+    </div>
+  </header>
+
+  <div class="controls">
+    <div class="modes" id="modes">
+      <button type="button" data-mode="follow" class="on">跟弹</button>
+      <button type="button" data-mode="beat">跟拍</button>
+      <button type="button" data-mode="demo">示范</button>
+      <button type="button" data-mode="free">自由</button>
+    </div>
+    <button class="btn" type="button" id="runBtn">开始 <kbd>空格</kbd></button>
+    <button class="btn" type="button" id="resetBtn">重置 <kbd>Esc</kbd></button>
+    <label class="ctl">速度 <input id="bpm" type="range" min="40" max="200" step="1" value="90"><b id="bpmv">90</b></label>
+    <label class="ctl"><input id="loop" type="checkbox" checked> 循环</label>
+    <label class="ctl">音量 <input id="vol" type="range" min="0" max="1" step="0.01" value="0.8"></label>
+  </div>
+
+  <section class="lesson">
+    <div class="now">
+      <div class="bigkey idle" id="bigkey">—</div>
+      <div class="now-side">
+        <div class="now-label" id="nowLabel">下一个</div>
+        <div class="now-spec" id="bigsub"><em>选一首曲子</em></div>
+        <div class="meter" id="meterWrap"><i id="meter"></i></div>
+      </div>
+    </div>
+
+    <div class="qbox">
+      <div class="q-label" id="queueLabel">接下来</div>
+      <div class="queue" id="queue"></div>
+      <div class="progress"><i id="progress"></i></div>
+      <div class="hintline" id="hintline">按 A 开始</div>
+    </div>
+
+    <div class="tally">
+      <div><b id="s-combo">0</b><span>连击</span></div>
+      <div><b id="s-hit">0</b><span>命中</span></div>
+      <div><b id="s-miss">0</b><span>错过</span></div>
+      <div><b id="s-wrong">0</b><span>按错</span></div>
+      <div><b id="s-acc">100%</b><span>准确率</span></div>
+    </div>
+  </section>
+
+  <section class="keyboard-wrap" id="kbWrap">
+    <div class="keyboard" id="keyboard"></div>
+  </section>
+
+  <section class="score" id="scoreSection">
+    <div class="score-head">
+      <span id="scoreMeter">1 = C　4/4</span>
+      <span id="scoreHint"></span>
+    </div>
+    <div class="score-lines" id="scoreLines"></div>
+  </section>
+
+  <footer class="foot">
+    <p><span class="k">键位</span>上排 <b>Q W E R T Y U</b> 高音 · 中排 <b>A S D F G H J</b> 中音 · 下排 <b>Z X C V B N M</b> 低音</p>
+    <p><span class="k">操作</span>按字母键或用鼠标点琴键 · 空格开始或停止 · Esc 重置 · 谱面上的 0 是空拍，A+E 表示两键一起按</p>
+    <p class="stamp" id="stamp"></p>
+  </footer>
+</main>
+
+<div class="boot-error" id="bootError" hidden>
+  <div>
+    <h2>曲目没能加载</h2>
+    <p>曲目放在单独的 JSON 文件里，浏览器不允许 <code>file://</code> 直接读取，所以需要用一个本地服务打开。</p>
+    <p>仓库根目录执行 <code>npm start</code>（或 <code>python -m http.server 8080</code>），然后访问 <code>http://localhost:8080</code>。</p>
+    <p>想双击就打开的话，先跑一次 <code>npm run build</code>，生成的 <code>dist/index.html</code> 是自带曲目的单文件版本。</p>
+    <p id="bootErrMsg" style="color:var(--slip);font-family:var(--mono);font-size:11.5px"></p>
+  </div>
+</div>
+
+<script>window.__SONGS_INLINE = null;</script>
+<script>
+(function(){
+'use strict';
+
+/* ===================== 键位与音高 ===================== */
+var ROWS = [
+  ['Q','W','E','R','T','Y','U'],
+  ['A','S','D','F','G','H','J'],
+  ['Z','X','C','V','B','N','M']
+];
+var PITCH = [0,2,4,5,7,9,11];
+var SOLFA = ['do','re','mi','fa','so','la','ti'];
+var OCTAVE = [{n:'高音',s:12},{n:'中音',s:0},{n:'低音',s:-12}];
+
+var KEY = {};
+ROWS.forEach(function(row,r){
+  row.forEach(function(k,c){
+    var o = OCTAVE[r];
+    KEY[k] = { key:k, row:r, col:c, deg:c+1, solfa:SOLFA[c], oct:o.n, midi:60+o.s+PITCH[c] };
+  });
+});
+
+/* ===================== 谱面解析 =====================
+   score 语法：
+     A            单键，一拍
+     A+E          和弦，同时按
+     0            空拍
+     [Q J]        一拍里平分（八分音符）
+     J:2          时值两拍
+     |            小节线（可选；不写就按 beatsPerMeasure 自动分）
+   ==================================================== */
+var entries = [], noteList = [], measures = [], totalBeats = 0;
+
+function tokenize(text){
+  var out = [], re = /(\[[^\]]*\](?::[0-9.]+)?|[^\s\[\]]+)/g, m;
+  text = String(text || '').replace(/\|/g, ' | ');
+  while((m = re.exec(text))) out.push(m[1]);
+  return out;
+}
+
+function parseScore(text, beatsPerMeasure){
+  entries = []; noteList = []; measures = []; totalBeats = 0;
+  var bpm = beatsPerMeasure || 4;
+  var gbeat = 0, inMeasure = 0, grpSeq = 0;
+  var cur = { entries:[], beats:0 };
+  measures.push(cur);
+
+  function newMeasure(){
+    cur = { entries:[], beats:0 };
+    measures.push(cur);
+    inMeasure = 0;
+  }
+
+  tokenize(String(text || '')).forEach(function(tok){
+    if(tok === '|'){
+      if(cur.entries.length) newMeasure();
+      return;
+    }
+    var items = [];
+    var bm = /^\[([^\]]*)\](?::([0-9.]+))?$/.exec(tok);
+    if(bm){
+      var inner = bm[1].trim().split(/\s+/).filter(Boolean);
+      var n = inner.length || 1;
+      var total = bm[2] ? parseFloat(bm[2]) : 1;
+      if(!(total > 0)) total = 1;
+      var gid = ++grpSeq;
+      if(!inner.length){ items.push({ t:'0', dur: total, grp: gid }); }
+      inner.forEach(function(s){ items.push({ t:s, dur: total/n, grp: gid }); });
+    }else{
+      items.push({ t: tok, dur: null, grp: 0 });
+    }
+
+    items.forEach(function(it){
+      var t = it.t, dur = it.dur;
+      var m = /^(.+):([0-9.]+)$/.exec(t);
+      if(m){ t = m[1]; dur = parseFloat(m[2]); }
+      if(dur == null || isNaN(dur) || dur <= 0) dur = 1;
+
+      var rest = (t === '0' || t === '-' || t === '.');
+      var keys = [];
+      if(!rest){
+        keys = t.split('+').map(function(s){ return s.trim().toUpperCase(); })
+                .filter(function(k, i, arr){ return !!KEY[k] && arr.indexOf(k) === i; });
+        if(!keys.length){
+          // 非法 token：当休止符占住时值，避免整条谱面往前错位
+          if(window.console) console.warn('[谱面] 无法识别的记号 "' + t + '"，按空拍处理');
+          rest = true;
+        }
+      }
+
+      var e = {
+        keys: keys, isRest: rest, beats: dur, grp: (it.grp || 0),
+        beat: gbeat, measure: measures.length - 1, idx: entries.length,
+        noteIdx: rest ? -1 : noteList.length,
+        hit:false, missed:false, pressed:[]
+      };
+      entries.push(e);
+      cur.entries.push(e);
+      cur.beats += dur;
+      if(!rest) noteList.push(e);
+
+      gbeat += dur;
+      inMeasure += dur;
+      if(inMeasure >= bpm - 1e-6) newMeasure();
+    });
+  });
+
+  if(measures.length > 1 && measures[measures.length-1].entries.length === 0) measures.pop();
+  totalBeats = gbeat;
+}
+
+/* ===================== 状态 ===================== */
+var S = {
+  mode:'follow',
+  bpm:90,
+  loop:true,
+  vol:0.8,
+  running:false,
+  done:false,
+  idx:0,
+  cur:0,
+  t0:0,
+  livepos:0,
+  clock:'perf',
+  gen:0,
+  stats:{perfect:0,good:0,ok:0,miss:0,wrong:0},
+  combo:0,
+  maxCombo:0,
+  lastScrollIdx:-1,
+  demoIdx:-1,
+  recent:[],
+  lastNote:null
+};
+
+var SONGS = [], song = null;
+
+/* ===================== 音频 ===================== */
+var ac=null, master=null, send=null;
+
+function ensureAudio(){
+  if(!ac){
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    ac = new AC();
+    buildGraph();
+  }
+  if(ac.state === 'suspended' && ac.resume) ac.resume();
+  return ac;
+}
+
+function buildGraph(){
+  master = ac.createGain();
+  master.gain.value = S.vol;
+  var comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -16; comp.knee.value = 24; comp.ratio.value = 4;
+  comp.attack.value = 0.004; comp.release.value = 0.22;
+  master.connect(comp);
+  comp.connect(ac.destination);
+
+  var rate = ac.sampleRate, len = Math.floor(rate * 1.7);
+  var ir = ac.createBuffer(2, len, rate);
+  for(var c=0;c<2;c++){
+    var d = ir.getChannelData(c);
+    for(var i=0;i<len;i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 2.6);
+  }
+  var conv = ac.createConvolver();
+  conv.buffer = ir;
+  var wet = ac.createGain(); wet.gain.value = 0.5;
+  send = ac.createGain(); send.gain.value = 0.34;
+  send.connect(conv); conv.connect(wet); wet.connect(master);
+}
+
+function playNote(midi, when, vel){
+  if(!ac) return;
+  var t = (typeof when === 'number') ? when : ac.currentTime + 0.002;
+  var f = 440 * Math.pow(2, (midi - 69) / 12);
+
+  var out = ac.createGain();
+  var peak = 0.17 * (vel || 1);
+  out.gain.setValueAtTime(0.0001, t);
+  out.gain.linearRampToValueAtTime(peak, t + 0.006);
+  out.gain.exponentialRampToValueAtTime(0.0008, t + 2.1);
+
+  var lp = ac.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 0.45;
+  lp.frequency.setValueAtTime(Math.min(12000, f*9), t);
+  lp.frequency.exponentialRampToValueAtTime(Math.max(500, f*1.7), t + 1.5);
+
+  var parts = [[1,'sine',1.00],[2,'sine',0.30],[3,'triangle',0.10],[4,'sine',0.05],[1.003,'sine',0.42]];
+  parts.forEach(function(p){
+    var o = ac.createOscillator();
+    o.type = p[1];
+    o.frequency.setValueAtTime(f * p[0], t);
+    var g = ac.createGain(); g.gain.value = p[2];
+    o.connect(g); g.connect(lp);
+    o.start(t); o.stop(t + 2.2);
+  });
+
+  lp.connect(out);
+  out.connect(master);
+  if(send) out.connect(send);
+}
+
+function playKeys(keys){
+  if(!keys) return;
+  keys.forEach(function(k){ if(KEY[k]) playNote(KEY[k].midi); });
+}
+
+/* ===================== DOM ===================== */
+function $(id){ return document.getElementById(id); }
+var appEl      = $('app');
+var kbEl       = $('keyboard');
+var kbWrap     = $('kbWrap');
+var scoreLines = $('scoreLines');
+var scoreMeter = $('scoreMeter');
+var scoreHint  = $('scoreHint');
+var bigEl      = $('bigkey');
+var bigSub     = $('bigsub');
+var nowLabel   = $('nowLabel');
+var queueEl    = $('queue');
+var queueLabel = $('queueLabel');
+var statusEl   = $('status');
+var statusTxt  = statusEl.querySelector('em');
+var progressEl = $('progress');
+var meterEl    = $('meter');
+var meterWrap  = $('meterWrap');
+var hintlineEl = $('hintline');
+var runBtn     = $('runBtn');
+var resetBtn   = $('resetBtn');
+var modeBtns   = Array.prototype.slice.call(document.querySelectorAll('#modes button'));
+var bpmRange   = $('bpm');
+var bpmv       = $('bpmv');
+var loopBox    = $('loop');
+var volRange   = $('vol');
+var songSel    = $('songSel');
+var songTitle  = $('songTitle');
+var songMeta   = $('songMeta');
+var tempoLabel = $('tempoLabel');
+var bootError  = $('bootError');
+var bootErrMsg = $('bootErrMsg');
+var stats = {
+  combo:$('s-combo'), hit:$('s-hit'), miss:$('s-miss'), wrong:$('s-wrong'), acc:$('s-acc')
+};
+
+var keyEls = {};
+var noteEls = [];
+
+/* ---- 琴键 ---- */
+ROWS.forEach(function(row,r){
+  var lab = document.createElement('div');
+  lab.className = 'rowlabel';
+  lab.textContent = OCTAVE[r].n;
+  kbEl.appendChild(lab);
+
+  row.forEach(function(k){
+    var info = KEY[k];
+    var el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'key';
+    el.dataset.key = k;
+    el.setAttribute('aria-label', k + ' ' + info.oct + ' ' + info.solfa);
+
+    var num = document.createElement('span');
+    num.className = 'knum';
+    var digit = document.createElement('span');
+    digit.textContent = String(info.deg);
+    if(r === 0 || r === 2){
+      var dot = document.createElement('i');
+      dot.className = 'kdot';
+      if(r === 0){ num.appendChild(dot); num.appendChild(digit); }
+      else { num.appendChild(digit); num.appendChild(dot); }
+    }else{
+      num.appendChild(digit);
+    }
+
+    var kl = document.createElement('span');
+    kl.className = 'kletter';
+    kl.textContent = k;
+
+    var so = document.createElement('span');
+    so.className = 'ksolfa';
+    so.textContent = info.solfa;
+
+    el.appendChild(num); el.appendChild(kl); el.appendChild(so);
+    el.addEventListener('pointerdown', function(ev){ ev.preventDefault(); pressKey(k); });
+    el.addEventListener('click', function(ev){ if(ev.detail === 0) pressKey(k); });  // 键盘 Enter 触发
+    kbEl.appendChild(el);
+    keyEls[k] = el;
+  });
+});
+
+/* ===================== 渲染谱面 ===================== */
+function renderScore(){
+  scoreLines.innerHTML = '';
+  noteEls = [];
+  scoreLines.scrollLeft = 0;
+
+  measures.forEach(function(m){
+    var box = document.createElement('div');
+    box.className = 'measure';
+    box.style.flexGrow = String(Math.max(1, m.beats));
+
+    var row = document.createElement('div');
+    row.className = 'beats';
+
+    var i = 0;
+    while(i < m.entries.length){
+      var slot = [m.entries[i]], sum = m.entries[i].beats, g0 = m.entries[i].grp;
+      i++;
+      while(i < m.entries.length && sum + m.entries[i].beats <= 1.0001 && (m.entries[i].grp === g0)){
+        slot.push(m.entries[i]);
+        sum += m.entries[i].beats;
+        i++;
+      }
+      var beatEl = document.createElement('div');
+      beatEl.className = 'beat' + (slot.length > 1 ? ' eighth' : '') + (slot.length > 2 ? ' tri' : '');
+      beatEl.style.flexGrow = String(sum);
+
+      slot.forEach(function(e){
+        var n = document.createElement('span');
+        n.className = 'note' + (e.isRest ? ' rest' : '') + (e.keys.length > 1 ? ' chord' : '');
+        n.textContent = e.isRest ? '0' : e.keys.join('+');
+        n.dataset.i = e.idx;
+        noteEls[e.idx] = n;
+        beatEl.appendChild(n);
+      });
+      row.appendChild(beatEl);
+    }
+
+    box.appendChild(row);
+    scoreLines.appendChild(box);
+  });
+}
+
+/* ===================== 运行时辅助 ===================== */
+function cnow(){
+  if(S.clock === 'audio' && ac) return ac.currentTime;
+  return performance.now() / 1000;
+}
+function beatDur(){ return 60 / S.bpm; }
+
+function resetStats(){
+  S.stats = {perfect:0, good:0, ok:0, miss:0, wrong:0};
+  S.combo = 0; S.maxCombo = 0;
+}
+function resetAllFlags(){
+  entries.forEach(function(e){ e.hit = false; e.missed = false; e.pressed = []; });
+}
+
+function hintEntry(){
+  if(S.mode === 'free') return null;
+  if(S.mode === 'demo' && S.demoIdx >= 0) return entries[S.demoIdx] || null;
+  if(S.mode === 'follow') return noteList[S.idx] || null;
+  for(var i=S.cur;i<entries.length;i++){
+    if(entries[i].isRest || entries[i].hit) continue;
+    return entries[i];
+  }
+  return null;
+}
+function targetEntry(){
+  if(S.mode === 'free') return null;
+  if(S.mode === 'demo' && S.demoIdx >= 0) return entries[S.demoIdx] || null;
+  if(S.mode === 'follow') return noteList[S.idx] || null;
+  return hintEntry();
+}
+function remainingKeys(e){
+  if(!e) return [];
+  return e.keys.filter(function(k){ return e.pressed.indexOf(k) < 0; });
+}
+
+/* ===================== 提示：高亮键 ===================== */
+function hintKeysOf(hint){
+  if(!hint) return [];
+  var keys = remainingKeys(hint);
+  return keys.length ? keys : hint.keys;
+}
+
+/* ===================== 谱面 / 磁带视图 ===================== */
+var scoreView = 'song';
+function ensureScoreView(view){
+  if(scoreView === view) return;
+  scoreView = view;
+  if(view === 'song'){
+    scoreLines.classList.remove('tape');
+    scoreMeter.textContent = '1 = C　' + ((song && song.timeSig) || '4/4');
+    scoreHint.textContent = '';
+    renderScore();
+  }else{
+    scoreLines.classList.add('tape');
+    scoreLines.innerHTML = '';
+  }
+}
+
+function paintTape(){
+  if(!S.recent.length){
+    scoreLines.innerHTML = '<div class="tape-empty">随便按几个键试试 —— 每个键都有对应的琴音</div>';
+    return;
+  }
+  var list = S.recent.slice(-40);
+  scoreLines.innerHTML = list.map(function(k, i){
+    return '<span class="note' + (i === list.length - 1 ? ' cur' : '') + '">' + k + '</span>';
+  }).join('');
+  scoreLines.scrollLeft = scoreLines.scrollWidth;
+}
+
+/* ===================== 渲染 ===================== */
+function setBigKey(label, cls){
+  bigEl.textContent = label;
+  bigEl.className = 'bigkey' + (cls ? ' ' + cls : '');
+}
+
+function render(){
+  var free = (S.mode === 'free');
+  appEl.classList.toggle('mode-free', free);
+
+  var live = S.running || (S.mode === 'follow' && !S.done && S.idx > 0);
+  statusTxt.textContent = S.done && !free ? '完成' : (live ? '进行中' : '待机');
+  statusEl.className = 'state' + (live ? ' live' : '');
+
+  if(free){
+    renderFree();
+  }else{
+    renderGuided();
+  }
+
+  /* 统计 */
+  var s = S.stats;
+  var hits = s.perfect + s.good + s.ok;
+  var total = hits + s.miss + s.wrong;
+  var acc = total ? Math.round(hits / total * 100) : 100;
+  stats.combo.textContent = S.combo;
+  stats.hit.textContent = hits;
+  stats.miss.textContent = s.miss;
+  stats.wrong.textContent = s.wrong;
+  stats.acc.textContent = acc + '%';
+
+  /* 进度 */
+  var frac = free ? 0 : (S.mode === 'follow'
+    ? (noteList.length ? S.idx / noteList.length : 0)
+    : (totalBeats ? S.livepos / totalBeats : 0));
+  progressEl.style.width = (Math.max(0, Math.min(1, frac)) * 100).toFixed(1) + '%';
+
+  /* 按钮文案 */
+  if(free) runBtn.innerHTML = '重新开始 <kbd>空格</kbd>';
+  else if(S.mode === 'demo') runBtn.innerHTML = (S.running ? '停止' : '重播') + ' <kbd>空格</kbd>';
+  else if(S.mode === 'beat') runBtn.innerHTML = (S.running ? '停止' : '开始') + ' <kbd>空格</kbd>';
+  else runBtn.innerHTML = '从头开始 <kbd>空格</kbd>';
+
+  paintMeter();
+}
+
+function renderGuided(){
+  ensureScoreView('song');
+  var hint = hintEntry();
+  var target = targetEntry();
+
+  nowLabel.textContent = '下一个';
+  queueLabel.textContent = '接下来';
+
+  if(hint){
+    var keys = remainingKeys(hint);
+    if(!keys.length) keys = hint.keys;
+    setBigKey(keys.join('+'), keys.length > 1 ? 'chord' : '');
+    var ki = KEY[keys[0]];
+    bigSub.innerHTML = '<b>' + ki.deg + '</b><span>' + ki.solfa + '</span><em>' + ki.oct + '</em>';
+  }else{
+    setBigKey('✓', S.done ? 'done' : 'idle');
+    bigSub.innerHTML = S.done ? '<em>全曲完成</em>' : '<em>—</em>';
+  }
+
+  var set = {};
+  hintKeysOf(hint).forEach(function(k){ set[k] = 1; });
+  Object.keys(keyEls).forEach(function(k){ keyEls[k].classList.toggle('next', !!set[k]); });
+
+  var qs = '', n = 0;
+  if(hint){
+    for(var i=hint.idx; i<entries.length && n<6; i++, n++){
+      var e = entries[i];
+      if(e.isRest) qs += '<span class="q rest">0</span>';
+      else qs += '<span class="q' + (e.keys.length>1 ? ' chord' : '') + '">' + e.keys.join('+') + '</span>';
+    }
+  }
+  queueEl.innerHTML = qs || '<span class="q rest">—</span>';
+
+  paintNotes(target);
+
+  if(S.done) hintlineEl.textContent = '全曲完成，按空格或 Esc 重来';
+  else if(S.mode === 'follow') hintlineEl.textContent = S.idx ? '弹对高亮的键就前进，Esc 从头开始' : '按 ' + (noteList[0] ? noteList[0].keys.join('+') : 'A') + ' 开始';
+  else if(S.mode === 'beat') hintlineEl.textContent = S.running ? '跟上节奏，看高亮的键' : '按空格开始跟拍';
+  else hintlineEl.textContent = '示范播放中，可以跟着一起弹';
+
+  scrollScoreTo(target);
+}
+
+function renderFree(){
+  var last = S.lastNote;
+  nowLabel.textContent = '最近弹奏';
+  queueLabel.textContent = '最近';
+
+  if(last && last.keys.length){
+    setBigKey(last.keys.join('+'), last.keys.length > 1 ? 'chord' : (last.keys.length ? '' : 'idle'));
+    var ki = KEY[last.keys[0]];
+    bigSub.innerHTML = '<b>' + ki.deg + '</b><span>' + ki.solfa + '</span><em>' + ki.oct + '</em>';
+  }else{
+    setBigKey('—', 'idle');
+    bigSub.innerHTML = '<em>随便按</em>';
+  }
+
+  Object.keys(keyEls).forEach(function(k){ keyEls[k].classList.remove('next'); });
+
+  queueEl.innerHTML = S.recent.length
+    ? S.recent.slice(-10).map(function(k){ return '<span class="q">' + k + '</span>'; }).join('')
+    : '<span class="q rest">—</span>';
+
+  ensureScoreView('tape');
+  paintTape();
+  scoreMeter.textContent = '自由弹奏';
+  scoreHint.textContent = S.recent.length ? S.recent.length + ' 个音' : '';
+
+  hintlineEl.textContent = '自由弹奏 · 按什么响什么';
+  meterWrap.style.visibility = 'hidden';
+}
+
+function paintNotes(target){
+  for(var j=0;j<noteEls.length;j++){
+    var e = entries[j], el = noteEls[j];
+    if(!el) continue;
+    var cls = 'note' + (e.isRest ? ' rest' : '') + (e.keys.length > 1 ? ' chord' : '');
+    if(e.missed) cls += ' miss';
+    else if(e.hit) cls += ' hit';
+    if(target && target.idx === e.idx) cls += ' cur';
+    if(el.className !== cls) el.className = cls;
+  }
+}
+
+function scrollScoreTo(target){
+  if(!target || target.idx === S.lastScrollIdx) return;
+  S.lastScrollIdx = target.idx;
+  var wrap = scoreLines;
+  if(wrap.scrollWidth <= wrap.clientWidth + 2) return;
+
+  var el = noteEls[target.idx];
+  if(!el) return;
+  var cr = wrap.getBoundingClientRect(), nr = el.getBoundingClientRect();
+  var leftInView = nr.left - cr.left;
+  if(leftInView > wrap.clientWidth * 0.15 && leftInView < wrap.clientWidth * 0.85) return;
+
+  var next = wrap.scrollLeft + leftInView - (wrap.clientWidth - nr.width) / 2;
+  var behavior = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth';
+  try { wrap.scrollTo({ left: Math.max(0, next), behavior: behavior }); }
+  catch(err){ wrap.scrollLeft = Math.max(0, next); }
+}
+
+function paintMeter(){
+  if(S.mode !== 'beat'){ meterWrap.style.visibility = 'hidden'; return; }
+  meterWrap.style.visibility = 'visible';
+  var h = hintEntry();
+  if(!S.running || !h || !ac){ meterEl.style.transform = 'scaleX(0)'; return; }
+  var bd = beatDur();
+  var t = S.t0 + h.beat * bd;
+  var left = t - cnow();
+  var frac = 1 - Math.min(Math.max(left / bd, 0), 1);
+  meterEl.style.transform = 'scaleX(' + frac.toFixed(3) + ')';
+}
+
+/* ===================== 交互 ===================== */
+var flashTimers = {};
+function flash(k, type){
+  var el = keyEls[k]; if(!el) return;
+  el.classList.remove('press','good','bad');
+  void el.offsetWidth;
+  el.classList.add(type);
+  clearTimeout(flashTimers[k]);
+  flashTimers[k] = setTimeout(function(){ el.classList.remove('press','good','bad'); },
+    type === 'bad' ? 420 : 170);
+}
+
+function pushRecent(k){
+  S.recent.push(k);
+  if(S.recent.length > 30) S.recent.shift();
+}
+
+function pressKey(k){
+  var info = KEY[k]; if(!info) return;
+  ensureAudio();
+  playNote(info.midi);
+  flash(k, 'press');
+  pushRecent(k);
+  S.lastNote = { keys:[k] };
+
+  if(S.mode === 'follow') followPress(k);
+  else if(S.mode === 'beat' && S.running) beatPress(k);
+  else if(S.mode === 'free') render();
+}
+
+function followPress(k){
+  if(S.done) return;
+  var target = noteList[S.idx];
+  if(!target) return;
+
+  if(target.keys.indexOf(k) < 0){
+    S.stats.wrong++;
+    S.combo = 0;
+    flash(k, 'bad');
+    render();
+    return;
+  }
+  if(target.pressed.indexOf(k) >= 0) return;
+  target.pressed.push(k);
+
+  if(target.pressed.length >= target.keys.length){
+    target.hit = true;
+    S.idx++;
+    S.combo++;
+    if(S.combo > S.maxCombo) S.maxCombo = S.combo;
+    S.stats.perfect++;
+    flash(k, 'good');
+    if(S.idx >= noteList.length){ finishRun(); return; }
+  }else{
+    flash(k, 'good');
+  }
+  render();
+}
+
+function beatPress(k){
+  var bd = beatDur(), win = Math.min(0.30, bd * 0.45), now = cnow();
+
+  var best=-1, bestDt=Infinity;
+  for(var i=S.cur;i<entries.length;i++){
+    var e = entries[i];
+    if(e.isRest){ continue; }
+    var t = S.t0 + e.beat * bd;
+    if(t - now > win) break;
+    if(e.hit) continue;
+    if(e.keys.indexOf(k) < 0) continue;
+    if(e.pressed.indexOf(k) >= 0) continue;
+    var d0 = Math.abs(t - now);
+    if(d0 < bestDt){ bestDt = d0; best = i; }
+  }
+  if(best >= 0){
+    var hit = entries[best];
+    if(hit.pressed.indexOf(k) >= 0){ render(); return; }
+    hit.pressed.push(k);
+
+    if(hit.pressed.length >= hit.keys.length){
+      hit.hit = true;
+      S.combo++;
+      if(S.combo > S.maxCombo) S.maxCombo = S.combo;
+      if(bestDt <= win * 0.3) S.stats.perfect++;
+      else if(bestDt <= win * 0.6) S.stats.good++;
+      else S.stats.ok++;
+      flash(k, 'good');
+    }else{
+      flash(k, 'press');
+    }
+    render();
+    return;
+  }
+
+  S.stats.wrong++;
+  S.combo = 0;
+  flash(k, 'bad');
+  render();
+}
+
+function startRun(){
+  if(!ensureAudio() || !entries.length) return;
+  S.gen++;
+  resetAllFlags();
+  resetStats();
+  S.clock = (ac && ac.state === 'running') ? 'audio' : 'perf';
+  S.running = true;
+  S.done = false;
+  S.cur = 0;
+  S.idx = 0;
+  S.livepos = 0;
+  S.lastScrollIdx = -1;
+  S.demoIdx = -1;
+  S.t0 = cnow() + 0.55;
+  if(S.mode === 'free') S.recent = [];
+  render();
+}
+
+function stopRun(){ S.running = false; S.demoIdx = -1; render(); }
+
+function reset(){
+  S.gen++;
+  S.running = false;
+  S.done = false;
+  S.idx = 0;
+  S.cur = 0;
+  S.livepos = 0;
+  S.combo = 0;
+  S.lastScrollIdx = -1;
+  S.demoIdx = -1;
+  S.recent = [];
+  S.lastNote = null;
+  resetAllFlags();
+  resetStats();
+  render();
+}
+
+function finishRun(){
+  S.running = false;
+  S.done = true;
+  S.demoIdx = -1;
+  if(S.mode !== 'follow') S.livepos = totalBeats;
+  render();
+  var g = S.gen;
+  if(S.loop){
+    setTimeout(function(){
+      if(g !== S.gen || !S.loop) return;
+      if(S.mode === 'follow') reset();
+      else startRun();
+    }, 1000);
+  }
+}
+
+function toggleRun(){
+  if(S.mode === 'free'){ reset(); return; }
+  if(S.mode === 'follow'){ reset(); return; }
+  if(S.running) stopRun(); else startRun();
+}
+
+function setMode(m){
+  S.mode = m;
+  modeBtns.forEach(function(b){
+    var on = (b.dataset.mode === m);
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  reset();
+  if(m === 'demo') startRun();
+  render();
+}
+
+/* ===================== 主循环 ===================== */
+function tick(){
+  if(!S.running || !ac) return;
+  var bd = beatDur();
+  var pos = (cnow() - S.t0) / bd;
+  S.livepos = Math.max(0, Math.min(pos, totalBeats));
+
+  var winBeats = Math.min(0.30, bd * 0.45) / bd;
+  var changed = false;
+
+  while(S.cur < entries.length){
+    var e = entries[S.cur];
+    if(S.mode === 'demo'){
+      if(e.beat < pos){
+        if(!e.isRest && !e.hit){
+          var stale = (pos - e.beat) > 0.6;
+          e.hit = true;
+          S.demoIdx = S.cur;
+          if(!stale) playKeys(e.keys);
+        }else if(e.isRest){
+          S.demoIdx = -1;
+        }
+        S.cur++; changed = true;
+      }else break;
+    }else{
+      if(e.beat + winBeats < pos){
+        if(!e.isRest && !e.hit){
+          e.missed = true;
+          S.stats.miss++;
+          S.combo = 0;
+        }
+        S.cur++; changed = true;
+      }else break;
+    }
+  }
+
+  if(totalBeats) progressEl.style.width = (Math.max(0, Math.min(1, S.livepos / totalBeats)) * 100).toFixed(1) + '%';
+  if(changed) render();
+  paintMeter();
+
+  if(pos > totalBeats + 0.9) finishRun();
+}
+
+(function rafLoop(){
+  requestAnimationFrame(rafLoop);
+  tick();
+})();
+
+/* ===================== 曲目加载 ===================== */
+function loadSongs(){
+  if(window.__SONGS_INLINE){
+    var inline = window.__SONGS_INLINE;
+    return Promise.resolve(inline.songs || inline);
+  }
+  var base = 'songs/';
+  return fetch(base + 'index.json', { cache:'no-cache' })
+    .then(function(r){
+      if(!r.ok) throw new Error('index.json HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(man){
+      return Promise.all(man.songs.map(function(id){
+        return fetch(base + id + '.json', { cache:'no-cache' }).then(function(r){
+          if(!r.ok) throw new Error(id + '.json HTTP ' + r.status);
+          return r.json();
+        });
+      }));
+    });
+}
+
+function selectSong(id){
+  var idx = 0;
+  for(var i=0;i<SONGS.length;i++) if(SONGS[i].id === id){ idx = i; break; }
+  song = SONGS[idx];
+
+  songSel.value = song.id;
+  songTitle.textContent = song.title || '琴键练习';
+
+  var bits = [];
+  if(song.from) bits.push(song.from);
+  bits.push(song.timeSig || '4/4');
+  songMeta.innerHTML = bits.map(function(t){ return '<span>' + t + '</span>'; }).join('');
+
+  scoreMeter.textContent = '1 = C　' + (song.timeSig || '4/4');
+  scoreHint.textContent = '';
+  scoreView = 'song';
+  scoreLines.classList.remove('tape');
+
+  parseScore(song.score, song.beatsPerMeasure || 4);
+  renderScore();
+
+  S.bpm = song.bpm || 90;
+  bpmRange.value = String(S.bpm);
+  bpmv.textContent = String(S.bpm);
+  tempoLabel.textContent = '♩=' + S.bpm;
+
+  reset();
+}
+
+function showBootError(err){
+  bootError.hidden = false;
+  bootErrMsg.textContent = err ? String(err.message || err) : '';
+}
+
+/* ===================== 事件 ===================== */
+var PHYS = { KeyQ:'Q', KeyW:'W', KeyE:'E', KeyR:'R', KeyT:'T', KeyY:'Y', KeyU:'U',
+             KeyA:'A', KeyS:'S', KeyD:'D', KeyF:'F', KeyG:'G', KeyH:'H', KeyJ:'J',
+             KeyZ:'Z', KeyX:'X', KeyC:'C', KeyV:'V', KeyB:'B', KeyN:'N', KeyM:'M' };
+
+window.addEventListener('keydown', function(ev){
+  if(ev.repeat) return;
+  if(ev.ctrlKey || ev.metaKey || ev.altKey) return;
+
+  var tag = (ev.target && ev.target.tagName) || '';
+  if(tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+
+  if(ev.code === 'Space'){ ev.preventDefault(); toggleRun(); return; }
+  if(ev.key === 'Escape'){ ev.preventDefault(); reset(); return; }
+
+  var k = PHYS[ev.code] || String(ev.key || '').toUpperCase();
+  if(k.length === 1 && KEY[k]){ ev.preventDefault(); pressKey(k); }
+}, {passive:false});
+
+modeBtns.forEach(function(b){ b.addEventListener('click', function(){ setMode(b.dataset.mode); }); });
+runBtn.addEventListener('click', toggleRun);
+resetBtn.addEventListener('click', reset);
+
+songSel.addEventListener('change', function(){ selectSong(songSel.value); });
+
+bpmRange.addEventListener('input', function(){
+  bpmv.textContent = bpmRange.value;
+  tempoLabel.textContent = '♩=' + bpmRange.value;
+});
+bpmRange.addEventListener('change', function(){
+  var v = Math.max(40, Math.min(200, parseInt(bpmRange.value, 10) || 90));
+  var bdOld = beatDur(), pos = 0;
+  if(S.running) pos = Math.max(0, (cnow() - S.t0) / bdOld);
+  S.bpm = v;
+  bpmv.textContent = String(S.bpm);
+  if(S.running) S.t0 = cnow() - pos * beatDur();   // 保持当前进度，不重置
+});
+
+loopBox.addEventListener('change', function(){ S.loop = loopBox.checked; });
+volRange.addEventListener('input', function(){
+  S.vol = parseFloat(volRange.value);
+  if(master) master.gain.value = S.vol;
+  if(S.vol > 0) ensureAudio();
+});
+window.addEventListener('blur', function(){
+  if(S.running && S.mode === 'beat') stopRun();
+});
+
+var rsT = 0;
+window.addEventListener('resize', function(){
+  clearTimeout(rsT);
+  rsT = setTimeout(function(){
+    S.lastScrollIdx = -1;
+    render();
+  }, 120);
+});
+
+/* ===================== 启动 ===================== */
+S.loop = loopBox.checked;
+S.vol = parseFloat(volRange.value);
+
+var stampEl = document.getElementById('stamp');
+if(stampEl){
+  var d0 = new Date();
+  stampEl.textContent = '本页加载于 ' + String(d0.getHours()).padStart(2,'0') + ':' +
+    String(d0.getMinutes()).padStart(2,'0') + ':' + String(d0.getSeconds()).padStart(2,'0') +
+    '　（刷新页面可确认拿到的是最新版）';
+}
+
+modeBtns.forEach(function(b){
+  b.setAttribute('aria-pressed', b.classList.contains('on') ? 'true' : 'false');
+});
+
+loadSongs().then(function(list){
+  SONGS = list || [];
+  if(!SONGS.length) throw new Error('没有曲目');
+  songSel.innerHTML = SONGS.map(function(s){
+    return '<option value="' + s.id + '">' + (s.title || s.id) + '</option>';
+  }).join('');
+  selectSong(SONGS[0].id);
+}).catch(showBootError);
+
+window.__practice = {
+  S:S, KEY:KEY,
+  get entries(){ return entries; },
+  get noteList(){ return noteList; },
+  get measures(){ return measures; },
+  get songs(){ return SONGS; },
+  get song(){ return song; },
+  pressKey:pressKey, reset:reset, setMode:setMode, startRun:startRun,
+  selectSong:selectSong, ac:function(){ return ac; }, master:function(){ return master; }
+};
+})();
+</script>
+</body>
+</html>
